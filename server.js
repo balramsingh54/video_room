@@ -20,18 +20,10 @@ let io = new Server(server,{
     }
 });
 
-// app.get('/', function(req, res) {
-//     // res.sendFile('index.html');
-//     res.sendFile(__dirname + '/index.html');
-//     res.end();
-//  });
 
 //   routing events listen
 app.get('/',function(req,res,next){
     res.send("welcome to signalling server");
-    // res.sendFile(__dirname + '/index.html');
-    //res.sendFile('index.html', { root: '.' });
-
     res.end();
 });
 
@@ -42,6 +34,7 @@ io.on("connection",function(socket){
       
      socket.on("join",({email,room_name})=>{
          connectedUser.push({email:email,socketId:socket.id});
+         console.log(email, room_name);
          socket.join(room_name);
          socket.to(room_name).emit("room_join",{"email":email});    
      });
@@ -55,6 +48,3 @@ io.on("connection",function(socket){
      });
      
 });
-
-
-// how to generate certificates

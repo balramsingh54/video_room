@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script> -->
+
+      <script src = "https://localhost:3000/socket.io/socket.io.js"></script>
+      <title>room join</title>
+   </head>
+
+   <body>
+      <video id="video" width="100%" height="100%" playsinline autoplay></video>
+      <video id="Rvideo" width="25%" height="25%" playsinline autoplay></video>
+
+
+      <script>
+         var socket = io('https://localhost:3000');
+
+         // emiting join event 
+         socket.emit('join', {email : prompt("enter your email id"),room_name:"balramgrp"});
+       
+         //listening join event 
+
+      
+         socket.on('room_join', function(data){
+            //add track to peer connection
+            addtrackpc();
+
+         console.log(data)
+         offer();
+
+      });
+
+      const constraints = {
+         video: true,
+         audio: false
+      };
+
+   let video= document.getElementById('video');
+   let Rvideo= document.getElementById('Rvideo');
+
+//       navigator.mediaDevices
+//       .getUserMedia(constraints)
+//       .then(stream => {
+//       video.srcObject = stream;
+//     //socket.emit('message');
+//   }).catch(error => console.error(error));
+
+
+      function locCam(){
+         navigator.mediaDevices
+         .getUserMedia(constraints)
+         .then(stream => {
+         video.srcObject = stream;
+         //socket.emit('message');
+         }).catch(error => console.error(error));
+      }
+
+      function RemCam(){
+         navigator.mediaDevices
+         .getUserMedia(constraints)
+         .then(stream => {
+         Rvideo.srcObject = stream;
+         //socket.emit('message');
+         }).catch(error => console.error(error));
+      }
+
+      const peerConnections = {};
+      const configg = {
+        iceServers: [
+            {
+               urls: ["stun:stun.l.google.com:19302"]
+            }
+         ]
+      };
+
+
+      // create peer connection
+   const peerConnection = new RTCPeerConnection(configg);
+   pc_event_listener()
+
+
+  let message = 
+{
+      iceRestart:true,
+      offerToReceiveAudio:true,
+      offerToReceiveVideo:true,
+      voiceActivityDetection:true
+ }
+
+ locCam();
+
+ function addtrackpc(){
+
+   let   stream = video.srcObject;
+         stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+ }
+
+ function addtrackpc2(){
+   let   stream = Rvideo.srcObject;
+         stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+ }
+
+ function pc_event_listener(){
+         
+        peerConnection.ontrack=event=>{
+            Rvideo.srcObject = event.streams[0];
+            console.log(event);
+         }
+         
+         peerConnection.onicecandidate = event => {
+         if (event.candidate) {
+            console.log(event.candidate)
+            var objt= {
+            room_name:'balramgrp',
+            data: {
+               type : 'candidate',
+               candidate : event.candidate
+            }
+
+
+         }
+            socket.emit('message', objt);
+            }
+         };
+ }
+ function offer(){
+
+
+
+   peerConnection
+      .createOffer(message)
+      .then(sdp => {console.log(sdp) 
+         var objt= {
+            room_name:'balramgrp',
+            data: sdp
+
+         }
+      peerConnection.setLocalDescription(sdp)
+      socket.emit('message', objt);
+      });
+
+ }
+
+ socket.on('message', (sdp)=>{
+      console.log(sdp)
+      if(sdp.type == 'offer')answer(sdp)
+      else if (sdp.type=='answer')
+      peerConnection.setRemoteDescription(sdp)
+
+      else if (sdp.type=='candidate')
+      addice(sdp.candidate);
+   }
+
+)
+    // handle sdp 
+      function handleoffer(sdp){
+         peerConnection.setRemoteDescription(sdp)
+
+      }
+
+      // add ice candidate 
+function addice(candidate){
+   peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+
+}
+
+      // create answer
+      function answer(sdp){
+         peerConnection.setRemoteDescription(sdp)
+
+         // let   stream = video.srcObject;
+         // stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+         addtrackpc();
+
+         peerConnection.createAnswer()
+         .then(sdp =>{
+            peerConnection.setLocalDescription(sdp)
+            console.log(sdp)
+
+            var objt= {
+            room_name:'balramgrp',
+            data: sdp
+         }
+
+         socket.emit('message', objt);
+   
+      });
+}
+ 
+      </script>
+
+   </body>
+</html>
+
+
+
+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

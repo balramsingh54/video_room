@@ -1,176 +1,166 @@
 <!DOCTYPE html>
 <html>
    <head>
-      <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script> -->
-
+      <link rel="stylesheet" href="main.css" />
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
       <script src = "https://localhost:3000/socket.io/socket.io.js"></script>
       <title>room join</title>
    </head>
-
    <body>
-      <video id="video" width="100%" height="100%" playsinline autoplay></video>
-      <video id="Rvideo" width="25%" height="25%" playsinline autoplay></video>
+      
+      <div class="container position-relative flex flex-column">
 
+          <div class="first">
+              <video class="w-100 h-100" id="Rvideo" autoplay playsinline></video>
+          </div>
+     
+           <div class="second">
+               <video id="video" autoplay playsinline></video>
+           </div>
+     
+           <!-- <div class="flex position-absolute cursor-pointer justify-content-center w-100"> -->
+           <div class="third">
+               <button id="st" onclick="stopVideo()">stop</button>
+               <button id="st" onclick="StartVideo()">start</button>
+
+               <button id="btn" onclick="MuteAudio()">Mute</button>
+               <button id="btn" onclick="UnmuteAudio()">Unmute</button>
+
+               <!-- <button id="hangupButton">Hang Up</button> -->
+           </div>
+     
+      </div>
 
       <script>
          var socket = io('https://localhost:3000');
+         let video= document.getElementById('Rvideo');
+         let Rvideo= document.getElementById('video');
+         let peerConnection;
 
-         // emiting join event 
-         socket.emit('join', {email : prompt("enter your email id"),room_name:"balramgrp"});
-       
-         //listening join event 
-
-      
-         socket.on('room_join', function(data){
-            //add track to peer connection
-            addtrackpc();
-
-         console.log(data)
-         offer();
-
-      });
-
-      const constraints = {
-         video: true,
-         audio: false
-      };
-
-   let video= document.getElementById('video');
-   let Rvideo= document.getElementById('Rvideo');
-
-//       navigator.mediaDevices
-//       .getUserMedia(constraints)
-//       .then(stream => {
-//       video.srcObject = stream;
-//     //socket.emit('message');
-//   }).catch(error => console.error(error));
-
-
-      function locCam(){
-         navigator.mediaDevices
-         .getUserMedia(constraints)
-         .then(stream => {
-         video.srcObject = stream;
-         //socket.emit('message');
-         }).catch(error => console.error(error));
-      }
-
-      function RemCam(){
-         navigator.mediaDevices
-         .getUserMedia(constraints)
-         .then(stream => {
-         Rvideo.srcObject = stream;
-         //socket.emit('message');
-         }).catch(error => console.error(error));
-      }
-
-      const peerConnections = {};
-      const configg = {
-        iceServers: [
-            {
-               urls: ["stun:stun.l.google.com:19302"]
-            }
-         ]
-      };
-
-
-      // create peer connection
-   const peerConnection = new RTCPeerConnection(configg);
-   pc_event_listener()
-
-
-  let message = 
-{
-      iceRestart:true,
-      offerToReceiveAudio:true,
-      offerToReceiveVideo:true,
-      voiceActivityDetection:true
- }
-
- locCam();
-
- function addtrackpc(){
-
-   let   stream = video.srcObject;
-         stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
- }
-
- function addtrackpc2(){
-   let   stream = Rvideo.srcObject;
-         stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
- }
-
- function pc_event_listener(){
-         
-        peerConnection.ontrack=event=>{
-            Rvideo.srcObject = event.streams[0];
-            console.log(event);
+         function room_join(){
+           socket.emit('join', {
+              email : prompt("enter your email id"),
+              room_name:"balramgrp"
+           });
          }
+         
+        const constraints = {
+            video: true,
+            audio: true
+         };
+
+         //var stream; 
+
+           function locCam() {
+
+               return new Promise((resolve,reject) => {
+               navigator.mediaDevices.getUserMedia(constraints)
+               .then(stream => {
+                   video.srcObject = stream;
+                   resolve(true)
+
+               })
+              .catch(error => console.error(error));
+          });
+         }
+
+         locCam()
+         .then((data) => room_join());
+
+         function createPeerConnection(){
+             const configg = {
+                iceServers: [
+                  {
+                    urls: ["stun:stun.l.google.com:19302"]
+                  }
+                ]
+             };
+            peerConnection = new RTCPeerConnection(configg);
+         }
+
+
+
+         let message = {
+            iceRestart:true,
+            offerToReceiveAudio:true,
+            offerToReceiveVideo:true,
+            voiceActivityDetection:true
+         }
+
+
+         function addtrackpc(){
+            let stream = video.srcObject;
+            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+        }
+
+       function pc_event_listener(){
+           
+            peerConnection.ontrack = event => {
+               Rvideo.srcObject = event.streams[0];
+               console.log(event);
+           }
          
          peerConnection.onicecandidate = event => {
-         if (event.candidate) {
-            console.log(event.candidate)
-            var objt= {
-            room_name:'balramgrp',
-            data: {
-               type : 'candidate',
-               candidate : event.candidate
-            }
-
-
-         }
-            socket.emit('message', objt);
+            if (event.candidate) {
+                console.log(event.candidate)
+                var objt= {
+                   room_name:'balramgrp',
+                    data: {
+                       type : 'candidate',
+                        candidate : event.candidate
+                   }
+                }
+                socket.emit('message', objt);
             }
          };
- }
- function offer(){
+       }
 
-
-
-   peerConnection
-      .createOffer(message)
-      .then(sdp => {console.log(sdp) 
-         var objt= {
-            room_name:'balramgrp',
-            data: sdp
-
-         }
-      peerConnection.setLocalDescription(sdp)
-      socket.emit('message', objt);
-      });
-
- }
-
- socket.on('message', (sdp)=>{
-      console.log(sdp)
-      if(sdp.type == 'offer')answer(sdp)
-      else if (sdp.type=='answer')
-      peerConnection.setRemoteDescription(sdp)
-
-      else if (sdp.type=='candidate')
-      addice(sdp.candidate);
-   }
-
-)
-    // handle sdp 
-      function handleoffer(sdp){
-         peerConnection.setRemoteDescription(sdp)
+      function offer(){
+          peerConnection.createOffer(message)
+         .then(sdp => {
+            console.log(sdp) 
+            var objt= {
+               room_name:'balramgrp',
+               data: sdp
+            }
+          peerConnection.setLocalDescription(sdp)
+          socket.emit('message', objt);
+         });
 
       }
 
-      // add ice candidate 
-function addice(candidate){
-   peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+     socket.on('message', (sdp) => {
+        console.log(sdp)
+      if(sdp.type == 'offer')
+         answer(sdp)
+      else if (sdp.type=='answer')
+         peerConnection.setRemoteDescription(sdp)
 
-}
+      else if (sdp.type=='candidate')
+         addice(sdp.candidate);
+    });
+
+    socket.on('room_join', function(data){
+            createPeerConnection();
+            pc_event_listener();
+            addtrackpc();
+            offer();
+            console.log(data)
+    });
+
+
+      // add ice candidate 
+     function addice(candidate){
+         peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+     }
 
       // create answer
       function answer(sdp){
-         peerConnection.setRemoteDescription(sdp)
-
-         // let   stream = video.srcObject;
-         // stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+         
+         createPeerConnection();
+         pc_event_listener();
          addtrackpc();
+         peerConnection.setRemoteDescription(sdp)
 
          peerConnection.createAnswer()
          .then(sdp =>{
@@ -183,15 +173,97 @@ function addice(candidate){
          }
 
          socket.emit('message', objt);
-   
       });
-}
- 
+    }
+
+
+   //     Mute and Unmute of audio
+
+      function MuteAudio(stream){
+
+         stream = video.srcObject;
+         const tracks = stream.getAudioTracks()
+         tracks[0].stop()
+         console.log(stream);
+
+      }
+
+
+      function UnmuteAudio(){
+        // stream = video.srcObject;
+
+         navigator.mediaDevices.getUserMedia({video: true, audio: true})
+         .then(stream => {
+            video.srcObject= stream;
+
+            peerConnection.getTransceivers()[0]
+            .sender.replaceTrack(stream.getAudioTracks()[0], stream)
+            //console.log(stream);
+               })
+               .then(data => {
+               console.log(data);
+            })
+            .catch(err=>console.error('1',err));
+      };
+
+   const MuteUnmuteBinding = () => {
+      let enabled = stream.getAudioTracks()[0].enabled;
+      if (enabled) {
+      stream.getAudioTracks()[0].enabled = false;
+      setUnmuteButton();
+      } else {
+      stream.getAudioTracks()[0].enabled = true;
+      setMuteButton();
+      }
+   };
+
+      //setting mute button of audio
+      const setUnmuteButton = () => {
+
+      document.getElementById("btn").innerHTML = "mute";
+      };
+
+      //setting unmute button of audio
+      const setMuteButton = () => {
+
+      document.getElementById("btn").innerHTML = "unmute";
+      };
+
+
+   function stopVideo(){
+     // console.log(stream);
+      let stream = video.srcObject;
+      console.log(stream.getVideoTracks()[0].stop());
+      video.srcObject= null;
+
+      navigator.mediaDevices.getUserMedia({video: false, audio: true})
+      .then(stream => {
+            video.srcObject= stream;
+
+            peerConnection.getTransceivers()[0].sender.replaceTrack(stream.getAudioTracks()[0], stream)
+            .then(data => {
+               console.log(data);
+            })
+            .catch(err=>console.error('1',err));
+      })
+      .catch(err=>console.error('2',err));
+
+   };
+
+   function StartVideo(){
+      navigator.mediaDevices.getUserMedia({audio: true, video: true})
+      .then(stream => {
+         video.srcObject= stream;
+         video.play();
+         peerConnection.getTransceivers()[0]
+         .sender.replaceTrack(stream.getVideoTracks()[0], stream);
+         console.log(stream);
+      })
+      .catch(err=>console.error('1',err));
+
+   };
       </script>
 
    </body>
 </html>
 
-
-
-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
